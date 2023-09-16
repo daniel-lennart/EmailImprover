@@ -4,33 +4,42 @@ import os
 from langchain import PromptTemplate
 from langchain.llms import OpenAI
 from trubrics.integrations.streamlit import FeedbackCollector
+import time
+
+if 'improvement_session' not in st.session_state:
+    st.session_state.improvement_session = time.time()
 
 # Check if 'response' is in the session state
 if 'response' not in st.session_state:
     st.session_state.response = None
 
+# Check if 'feedback_submitted' is in the session state
+if 'feedback_submitted' not in st.session_state:
+    st.session_state.feedback_submitted = False
+
 # Email improvement template
 template = """
-    Below is an email that may require enhancements in its presentation or translation to English. Your tasks are:
-    - Translate the email to English if it's written in another language.
-    - Improve provided text ensuring the email has a clear structure and format.
-    - Modify the text to align with the chosen tone.
-    - Tailor the content to fit the selected English dialect.
+        Below is an email that may require enhancements in its presentation or translation to English. Your tasks are:
+        - Translate the email to English if it's written in another language.
+        - Expand and improve the provided text ensuring the email has a clear structure and format.
+        - Modify the text to align with the chosen tone.
+        - Tailor the content to fit the selected English dialect.
+        - Do not reply to the email, just improve.
 
     For clarity, here are some examples:
 
     Tones:
-    - Formal: "During our recent trip to Tokyo, we encountered several intriguing cultural nuances that we believe would be of interest to you."
-    - Informal: "Guess what? We hit up Tokyo and saw some super cool stuff! Can't wait to spill the beans!"
+        - Formal: "During our recent trip to Tokyo, we encountered several intriguing cultural nuances."
+        - Informal: "Guess what? We hit up Tokyo and saw some super cool stuff!"
 
     English Dialect Variants:
-    - American:
-    - Words: Sneakers, truck, fries, elevator, trash can, cookie, yard, pants, hood, faucet, vacation.
-    - Sentence: "I grabbed some fries from the diner, then took an elevator to my apartment. Planning a vacation next month!"
+        - American:
+        - Words: Sneakers, truck, fries, elevator, trash can, cookie, yard, pants, hood, faucet, vacation.
+        - Sentence: "I grabbed some fries from the diner, then took an elevator to my apartment. Planning a vacation next month!"
 
-    - British:
-    - Words: Trainers, lorry, chips, lift, bin, biscuit, garden, trousers, bonnet, tap, holiday.
-    - Sentence: "I fancied some chips from the cafe, then used the lift to reach my flat. Got a holiday lined up next month!"
+        - British:
+        - Words: Trainers, lorry, chips, lift, bin, biscuit, garden, trousers, bonnet, tap, holiday.
+        - Sentence: "I fancied some chips from the cafe, then used the lift to reach my flat. Got a holiday lined up next month!"
 
     It's essential for the email to have a welcoming opening. If the original email doesn't have one, please incorporate a suitable introduction.
 
@@ -39,7 +48,8 @@ template = """
     VARIANT: {variant}
     EMAIL: {email}
 
-    YOUR {variant} RESPONSE:
+    YOUR IMPROVED {variant} EMAIL:
+
 """
 
 prompt = PromptTemplate(
@@ -65,6 +75,7 @@ st.set_page_config(
 
 # Explanation at the beginning of the page
 st.write("Welcome to the Email Improvement tool! This tool is part of a research project and will be running as long as users submit feedback. Your feedback is invaluable to us!")
+st.write("📱 For mobile users: Tap on the top-left icon to access settings!")
 
 # Create a sidebar for user inputs and settings
 st.sidebar.header("Settings")
@@ -85,6 +96,11 @@ email_content = st.text_area("Email Content", "Type your email here...", max_cha
 
 # Button to trigger the improvement process
 if st.button("Improve Email"):
+
+    # Reset feedback submitted state
+    st.session_state.feedback_submitted = False
+    st.session_state.improvement_session = time.time()
+
     # Load the LLM with the provided API key and temperature
     llm = load_LLM(openai_api_key, temperature)
     
@@ -107,11 +123,12 @@ collector = FeedbackCollector(
     password=os.environ.get("TRUBRICS_PASSWORD"),
 )
 
-collector.st_feedback(
+# Only display the feedback collector if feedback hasn't been submitted for the current improved email
+feedback = collector.st_feedback(
     component="default",
     feedback_type="thumbs",
     model="gpt-3.5-turbo",
-    prompt_id=None,  # see prompts to log prompts and model generations
+    prompt_id=str(st.session_state.improvement_session),  # Convert the session timestamp to a string
     open_feedback_label='[Optional] Provide additional feedback'
 )
 
