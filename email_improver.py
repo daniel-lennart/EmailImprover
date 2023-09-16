@@ -13,7 +13,7 @@ if 'response' not in st.session_state:
 template = """
     Below is an email that may require enhancements in its presentation or translation to English. Your tasks are:
     - Translate the email to English if it's written in another language.
-    - Ensure the email has a clear structure and format.
+    - Improve provided text ensuring the email has a clear structure and format.
     - Modify the text to align with the chosen tone.
     - Tailor the content to fit the selected English dialect.
 
